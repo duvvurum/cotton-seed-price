@@ -80,12 +80,16 @@ min.data <- rbind(min.monthAgg.10, min.monthAgg.13,min.monthAgg.14,min.monthAgg.
 write.csv(min.data, file = "min-cotton-price.csv")
 #Remove. Rownames. remove the 2002 partial list. Convert MOnth Char to Date format. sort it by Year and month.
 library(forecast)
-library(TTR)
+library(tseries)
+#library(TTR)
 minData <- read.csv("min-cotton-price.csv", header = T)
 values <- minData$Min_x0020_Price
 tsmin <- ts(values, start = c(2003,1), end = c(2015, 12), frequency = 12)
 plot(tsmin)
 ts.plot(tsmin)
+seasonplot(x = tsmin, year.labels = T, year.labels.left = T, col=1:20)
+monthplot(x = tsmin)
+adf.test(tsmin, alternative = "stationary") # test of stationary
 decompose(tsmin)
 plot(decompose(tsmin))
 plot(log(tsmin))
@@ -134,3 +138,40 @@ plot(forecast(etsFit, h = 24))
 accuracy(arimaFit)
 accuracy(seedPriceForecast)
 accuracy(etsFit)
+
+#exploring data wiht pots.
+#Check for trend up or down
+# check for seasonlaity
+seasonplot(x = tsmin, year.labels = T, year.labels.left = T, col=1:20)
+monthplot(x = tsmin)
+
+
+
+# Simple forecasts. 
+meanf(tsmin) # the future values are equal to the mean of the time series
+naive(tsmin) # the future values are equal to the last value in the time series
+snaive(tsmin) # the future values are equal to the the last observed value from the same season of the year
+#Drift method
+#A variation on the naïve method is to allow the forecasts to increase or decrease over time, 
+#where the amount of change over time (called the drift) is set to be the average change seen in the historical data.
+rwf(tsmin, 24, drift=TRUE)
+res<-residuals(rwf(tsmin,24,drift = T))
+res
+Acf(res)
+layout(1:4)
+plot(HoltWinters(tsmin, alpha=0.25, beta=FALSE, gamma=FALSE), main="Alpha=0.25")
+plot(HoltWinters(tsmin, alpha=0.5, beta=FALSE, gamma=FALSE), main="Alpha=0.5")
+plot(HoltWinters(tsmin, alpha=0.75, beta=FALSE, gamma=FALSE), main="Alpha=0.75")
+plot(HoltWinters(tsmin, alpha=1, beta=FALSE, gamma=FALSE), main="Alpha=1")
+
+
+
+fy13Data <- read.csv("FY13-cotton-seed.csv", header = T, row.names = 1)
+fy13Data$Arrival_Date <- as.character(fy13Data$Arrival_Date)
+fy13Data$Date <- as.Date(fy13Data$Arrival_Date, format = "%d/%m/%Y")
+fy13Data$Month <- format(fy13Data$Date, format = "%b")
+fy13Data$Year <- format(fy13Data$Date, format = "%Y")
+class(fy13Data$Year)
+min.monthAgg.13 <- aggregate(Min_x0020_Price ~ Year + Month, data = fy13Data, FUN = mean)
+max.monthAgg.13 <- aggregate(Max_x0020_Price ~ Year + Month, data = fy13Data, FUN = mean)
+model.monthAgg.13 <- aggregate(Modal_x0020_Price ~ Year + Month, data = fy13Data, FUN = mean)
